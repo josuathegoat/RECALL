@@ -134,13 +134,8 @@ function MovementController:_onInputBegan(input: InputObject)
     local s = self._state
     if not s.humanoid or not s.rootPart then return end
 
-    -- C key: Slide if sprinting + moving, otherwise handled by FPSController as crouch
-    if input.KeyCode == Enum.KeyCode.C then
-        if s.isSprinting and s.isGrounded and s.moveDirection.Magnitude > 0 then
-            self._slide:Activate()
-            return
-        end
-    end
+    -- C key slide is now handled by FPSController via TrySlide() to avoid
+    -- the sprint state race condition. No C key handling needed here.
 
     -- Space: Wall Bounce (if wall sliding) or Double Jump (if airborne)
     if input.KeyCode == Enum.KeyCode.Space then
@@ -165,6 +160,33 @@ function MovementController:_onInputBegan(input: InputObject)
         self._airDash:Activate()
         return
     end
+end
+
+--- Called by FPSController on C key press with LIVE sprint state and move direction.
+--- Returns true if slide activated (consumed the input), false otherwise.
+function MovementController:TrySlide(isSprinting: boolean, worldMoveDir: Vector3): boolean
+    local s = self._state
+    if not s.humanoid or not s.rootPart then return false end
+
+    -- Temporarily write the live values into shared state so Slide:CanActivate reads them
+    local prevSprint = s.isSprinting
+    local prevMoveDir = s.moveDirection
+    s.isSprinting = isSprinting
+    s.moveDirection = worldMoveDir
+
+    local activated = false
+    if self._slide:CanActivate() then
+        self._slide:Activate()
+        activated = true
+    end
+
+    -- If slide didn't activate, restore previous shared state
+    if not activated then
+        s.isSprinting = prevSprint
+        s.moveDirection = prevMoveDir
+    end
+
+    return activated
 end
 
 --- Returns true if the player is currently sliding (so FPSController can adjust speed/crouch)

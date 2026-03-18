@@ -143,9 +143,30 @@ function FPSController:_onInputBegan(input: InputObject)
         if input.KeyCode == Enum.KeyCode.LeftShift then
             self:_startSprint()
         elseif input.KeyCode == Enum.KeyCode.C then
-            self:_toggleCrouch()
+            -- Try slide first: pass live sprint state + move direction so the
+            -- check happens BEFORE _toggleCrouch kills the sprint flag.
+            local worldMoveDir = self:_getWorldMoveDirection()
+            if self._movement:TrySlide(self._isSprinting, worldMoveDir) then
+                -- Slide consumed the input — sync our local state to match
+                self._isSprinting = false
+                self._isCrouching = true
+                self:_updateWalkSpeed()
+            else
+                self:_toggleCrouch()
+            end
         end
     end
+end
+
+--- Compute camera-relative world move direction from current WASD keys
+function FPSController:_getWorldMoveDirection(): Vector3
+    local moveVector = self:_getMoveVector()
+    if moveVector.Magnitude == 0 then
+        return Vector3.zero
+    end
+    local cameraYawCFrame = CFrame.fromEulerAnglesYXZ(0, math.rad(self._yaw), 0)
+    local worldMove = cameraYawCFrame:VectorToWorldSpace(moveVector)
+    return Vector3.new(worldMove.X, 0, worldMove.Z).Unit
 end
 
 function FPSController:_onInputEnded(input: InputObject)
