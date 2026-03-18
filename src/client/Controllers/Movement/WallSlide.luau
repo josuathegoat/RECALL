@@ -83,6 +83,8 @@ function WallSlide:_detectWall(): Vector3?
     rayParams.FilterDescendantsInstances = { s.character }
 
     local result = workspace:Raycast(origin, moveDir * WALL_DETECT_DISTANCE, rayParams)
+    local foundWall = result ~= nil and result.Normal ~= nil and math.abs(result.Normal.Y) < 0.3
+    print("WALL CHECK - found wall:", foundWall, "airborne:", not s.isGrounded, "rayDir:", moveDir, "rayDist:", WALL_DETECT_DISTANCE)
     if result and result.Normal then
         -- Wall normal should be mostly horizontal
         local normal = result.Normal

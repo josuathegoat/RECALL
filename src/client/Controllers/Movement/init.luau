@@ -139,6 +139,7 @@ function MovementController:_onInputBegan(input: InputObject)
 
     -- Space: Wall Bounce (if wall sliding) or Double Jump (if airborne)
     if input.KeyCode == Enum.KeyCode.Space then
+        print("SPACE PRESSED - airborne:", not s.isGrounded, "wallSliding:", s.isWallSliding, "hasDoubleJumped:", s.hasDoubleJumped)
         if s.isWallSliding then
             self._wallBounce:Activate()
             return
@@ -167,6 +168,8 @@ end
 function MovementController:TrySlide(isSprinting: boolean, worldMoveDir: Vector3): boolean
     local s = self._state
     if not s.humanoid or not s.rootPart then return false end
+
+    print("C PRESSED - sprinting:", isSprinting, "sliding:", s.isSliding, "onCooldown:", self._slide._cooldownTimer > 0, "onGround:", s.isGrounded, "moveDir:", worldMoveDir)
 
     -- Temporarily write the live values into shared state so Slide:CanActivate reads them
     local prevSprint = s.isSprinting
