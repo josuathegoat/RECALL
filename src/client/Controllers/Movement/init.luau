@@ -4,12 +4,14 @@
     Handles input routing so mechanics chain fluidly:
 
     Chain map:
-      Sprint + Crouch  ->  Slide
-      Slide + Jump     ->  Boosted launch into air
-      Air + Jump       ->  Double Jump
-      Air + Q          ->  Air Dash
-      Falling + Wall   ->  Wall Slide (auto)
-      Wall Slide + Jump -> Wall Bounce -> DoubleJump / AirDash
+      Sprint + C (ground)    ->  Slide
+      Slide + Jump           ->  Boosted launch into air
+      Air + Space            ->  Double Jump
+      Air + LeftShift        ->  Air Dash
+      Falling + Wall         ->  Wall Slide (auto)
+      Wall Slide + Space     ->  Wall Bounce (resets double jump)
+      Wall Bounce + Space    ->  Double Jump
+      Wall Bounce + Shift    ->  Air Dash
 ]]
 
 local Players = game:GetService("Players")
@@ -134,13 +136,11 @@ function MovementController:_onInputBegan(input: InputObject)
     local s = self._state
     if not s.humanoid or not s.rootPart then return end
 
-    -- C key slide is now handled by FPSController via TrySlide() to avoid
-    -- the sprint state race condition. No C key handling needed here.
-
     -- Space: Wall Bounce (if wall sliding) or Double Jump (if airborne)
     if input.KeyCode == Enum.KeyCode.Space then
         print("SPACE PRESSED - airborne:", not s.isGrounded, "wallSliding:", s.isWallSliding, "hasDoubleJumped:", s.hasDoubleJumped)
         if s.isWallSliding then
+            print("  -> Activating WALL BOUNCE")
             self._wallBounce:Activate()
             return
         end
@@ -151,48 +151,51 @@ function MovementController:_onInputBegan(input: InputObject)
         end
 
         if not s.isGrounded then
+            print("  -> Activating DOUBLE JUMP")
             self._doubleJump:Activate()
             return
         end
     end
-
-    -- Q: Air Dash
-    if input.KeyCode == Enum.KeyCode.Q then
-        self._airDash:Activate()
-        return
-    end
 end
 
---- Called by FPSController on C key press with LIVE sprint state and move direction.
---- Returns true if slide activated (consumed the input), false otherwise.
-function MovementController:TrySlide(isSprinting: boolean, worldMoveDir: Vector3): boolean
+--- Called by FPSController when C is pressed while sprinting.
+--- Directly activates slide without the CanActivate double-check race.
+function MovementController:ForceSlide(worldMoveDir: Vector3)
     local s = self._state
-    if not s.humanoid or not s.rootPart then return false end
+    if not s.humanoid or not s.rootPart then return end
 
-    print("C PRESSED - sprinting:", isSprinting, "sliding:", s.isSliding, "onCooldown:", self._slide._cooldownTimer > 0, "onGround:", s.isGrounded, "moveDir:", worldMoveDir)
+    -- Refresh ground state NOW (don't rely on last frame's value)
+    s.isGrounded = self:_checkGrounded()
 
-    -- Temporarily write the live values into shared state so Slide:CanActivate reads them
-    local prevSprint = s.isSprinting
-    local prevMoveDir = s.moveDirection
-    s.isSprinting = isSprinting
+    print("FORCE SLIDE - onGround:", s.isGrounded, "sliding:", s.isSliding, "onCooldown:", self._slide._cooldownTimer > 0, "moveDir:", worldMoveDir)
+
+    if not s.isGrounded then return end
+    if s.isSliding then return end
+    if self._slide._cooldownTimer > 0 then return end
+
+    -- Set shared state to match what Slide expects, then activate
+    s.isSprinting = true
     s.moveDirection = worldMoveDir
-
-    local activated = false
-    if self._slide:CanActivate() then
-        self._slide:Activate()
-        activated = true
-    end
-
-    -- If slide didn't activate, restore previous shared state
-    if not activated then
-        s.isSprinting = prevSprint
-        s.moveDirection = prevMoveDir
-    end
-
-    return activated
+    self._slide:Activate()
+    print("  -> Slide ACTIVATED:", s.isSliding)
 end
 
---- Returns true if the player is currently sliding (so FPSController can adjust speed/crouch)
+--- Called by FPSController when LeftShift is pressed while airborne.
+function MovementController:TryAirDash(worldMoveDir: Vector3)
+    local s = self._state
+    if not s.humanoid or not s.rootPart then return end
+
+    -- Update move direction for the dash
+    s.moveDirection = worldMoveDir
+    self._airDash:Activate()
+end
+
+--- Returns current grounded state
+function MovementController:IsGrounded(): boolean
+    return self._state.isGrounded
+end
+
+--- Returns true if the player is currently sliding
 function MovementController:IsSliding(): boolean
     return self._state.isSliding
 end

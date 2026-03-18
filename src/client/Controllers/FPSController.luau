@@ -72,8 +72,10 @@ function FPSController:_setupCharacter()
     self._camera.CameraType = Enum.CameraType.Scriptable
     UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
 
-    -- Set base walk speed
+    -- Set base walk speed and jump power
     self._humanoid.WalkSpeed = GameConfig.Movement.BaseWalkSpeed
+    self._humanoid.JumpPower = GameConfig.Movement.JumpPower
+    self._humanoid.UseJumpPower = true
 
     -- Reset camera angles to face character's direction
     local currentCFrame = self._rootPart.CFrame
@@ -141,17 +143,26 @@ function FPSController:_onInputBegan(input: InputObject)
         self._keysDown[input.KeyCode] = true
 
         if input.KeyCode == Enum.KeyCode.LeftShift then
-            self:_startSprint()
+            -- Ground = sprint, Air = air dash
+            if self._movement:IsGrounded() then
+                self:_startSprint()
+            else
+                local worldMoveDir = self:_getWorldMoveDirection()
+                print("SHIFT AIRDASH - airborne:", true, "moveDir:", worldMoveDir)
+                self._movement:TryAirDash(worldMoveDir)
+            end
         elseif input.KeyCode == Enum.KeyCode.C then
-            -- Try slide first: pass live sprint state + move direction so the
-            -- check happens BEFORE _toggleCrouch kills the sprint flag.
-            local worldMoveDir = self:_getWorldMoveDirection()
-            if self._movement:TrySlide(self._isSprinting, worldMoveDir) then
-                -- Slide consumed the input — sync our local state to match
+            -- Check sprint state BEFORE anything else
+            print("C KEY - sprint:", self._isSprinting)
+            if self._isSprinting then
+                -- Sprinting + C = slide. Pass live state directly.
+                local worldMoveDir = self:_getWorldMoveDirection()
+                self._movement:ForceSlide(worldMoveDir)
                 self._isSprinting = false
                 self._isCrouching = true
                 self:_updateWalkSpeed()
             else
+                -- Not sprinting = normal crouch toggle
                 self:_toggleCrouch()
             end
         end

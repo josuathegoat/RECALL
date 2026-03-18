@@ -2,7 +2,8 @@
     RECALL — Double Jump Module
     Grants one extra jump while airborne.
     Chains: Can trigger after Slide launch, Wall Bounce, or normal jump.
-           Resets on landing. Air Dash can follow.
+           Resets on landing. Wall Bounce also resets this via shared state.
+           Air Dash can follow.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -14,7 +15,6 @@ DoubleJump.__index = DoubleJump
 function DoubleJump.new(state)
     local self = setmetatable({}, DoubleJump)
     self._state = state
-    self._hasDoubleJumped = false
     self._wasGrounded = true
     return self
 end
@@ -23,7 +23,7 @@ function DoubleJump:CanActivate(): boolean
     local s = self._state
     return s.humanoid
         and not s.isGrounded
-        and not self._hasDoubleJumped
+        and not s.hasDoubleJumped -- uses SHARED state so wall bounce reset flows through
         and not s.isWallSliding
 end
 
@@ -31,7 +31,6 @@ function DoubleJump:Activate()
     local s = self._state
     if not self:CanActivate() then return end
 
-    self._hasDoubleJumped = true
     s.hasDoubleJumped = true
 
     -- Apply upward impulse
@@ -44,6 +43,7 @@ function DoubleJump:Activate()
 
     local jumpImpulse = Vector3.new(0, GameConfig.Movement.DoubleJumpPower, 0)
     rootPart:ApplyImpulse(jumpImpulse * rootPart.AssemblyMass)
+    print("DOUBLE JUMP - applied impulse:", GameConfig.Movement.DoubleJumpPower)
 end
 
 function DoubleJump:Update(dt: number)
@@ -51,7 +51,6 @@ function DoubleJump:Update(dt: number)
 
     -- Reset double jump when landing
     if s.isGrounded and not self._wasGrounded then
-        self._hasDoubleJumped = false
         s.hasDoubleJumped = false
     end
 
