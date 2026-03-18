@@ -10,6 +10,7 @@ local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
+local MovementController = require(script.Parent.Movement)
 
 local FPSController = {}
 FPSController.__index = FPSController
@@ -37,6 +38,9 @@ function FPSController.new()
     -- Input tracking
     self._keysDown = {}
 
+    -- Advanced movement
+    self._movement = MovementController.new()
+
     -- Connections
     self._connections = {}
 
@@ -47,6 +51,9 @@ function FPSController:Start()
     self:_setupCharacter()
     self:_bindInput()
     self:_bindRenderStep()
+
+    -- Start advanced movement system
+    self._movement:Start()
 
     -- Handle respawns
     self._connections.characterAdded = self._player.CharacterAdded:Connect(function()
@@ -78,6 +85,9 @@ function FPSController:_setupCharacter()
     self._isSprinting = false
     self._isCrouching = false
     self._currentCameraOffset = GameConfig.Camera.StandingCameraOffset
+
+    -- Setup advanced movement for this character
+    self._movement:SetupCharacter(character, self._humanoid, self._rootPart)
 
     -- Hide local character from camera (first-person invisibility)
     self:_hideCharacter(character)
@@ -172,6 +182,11 @@ end
 function FPSController:_updateWalkSpeed()
     if not self._humanoid then return end
 
+    -- During slide or dash, modules control velocity directly via BodyVelocity
+    if self._movement:IsSliding() or self._movement:IsDashing() then
+        return
+    end
+
     local speed = GameConfig.Movement.BaseWalkSpeed
     if self._isSprinting then
         speed = speed * GameConfig.Movement.SprintMultiplier
@@ -236,14 +251,24 @@ function FPSController:_update(dt: number)
 
     -- Movement relative to camera facing
     local moveVector = self:_getMoveVector()
+    local worldMoveDir = Vector3.zero
     if moveVector.Magnitude > 0 then
         -- Get camera's horizontal rotation only (no pitch)
         local cameraYawCFrame = CFrame.fromEulerAnglesYXZ(0, math.rad(self._yaw), 0)
         local worldMove = cameraYawCFrame:VectorToWorldSpace(moveVector)
-        self._humanoid:Move(Vector3.new(worldMove.X, 0, worldMove.Z).Unit)
+        worldMoveDir = Vector3.new(worldMove.X, 0, worldMove.Z).Unit
+        self._humanoid:Move(worldMoveDir)
     else
         self._humanoid:Move(Vector3.zero)
     end
+
+    -- Sync crouch state from movement controller (slide sets isCrouching)
+    if self._movement:IsSliding() then
+        self._isCrouching = true
+    end
+
+    -- Update advanced movement system
+    self._movement:Update(dt, self._isSprinting, self._isCrouching, worldMoveDir)
 
     -- Keep mouse locked
     UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
@@ -254,6 +279,7 @@ function FPSController:Destroy()
         connection:Disconnect()
     end
     self._connections = {}
+    self._movement:Destroy()
 end
 
 return FPSController
