@@ -1,21 +1,19 @@
 --[[
     RECALL — Client Entry Point
-    Initializes Knit framework and all client-side Controllers.
+    Initializes all client-side controllers.
+
+    NOTE: Knit framework disabled until Comm/Signal packages are added.
+    Controllers are loaded directly for now.
 ]]
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Knit = require(ReplicatedStorage.Packages.Knit)
+local FPSController = require(script.Controllers.FPSController)
+local CrosshairController = require(script.Controllers.CrosshairController)
 
--- Load all Controllers (Knit auto-discovers them)
-for _, module in ipairs(script.Controllers:GetChildren()) do
-    if module:IsA("ModuleScript") then
-        require(module)
-    end
-end
+-- Initialize controllers
+local fps = FPSController.new()
+local crosshair = CrosshairController.new()
 
--- Start Knit
-Knit.Start():andThen(function()
-    print("[RECALL Client] All controllers started.")
-end):catch(function(err)
-    warn("[RECALL Client] Failed to start:", err)
-end)
+fps:Start()
+crosshair:Start()
+
+print("[RECALL Client] All controllers started.")

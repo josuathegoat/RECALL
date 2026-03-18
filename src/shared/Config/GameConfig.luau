@@ -9,6 +9,7 @@ local GameConfig = {}
 GameConfig.Movement = {
     BaseWalkSpeed = 16,
     SprintMultiplier = 1.4,
+    CrouchMultiplier = 0.6,
     SlideSpeed = 24,
     SlideDuration = 1.5,
     SlideCooldown = 2.0,
@@ -21,6 +22,16 @@ GameConfig.Movement = {
     MaxStamina = 100,
     StaminaDrainRate = 20, -- per second while sprinting
     StaminaRegenRate = 15, -- per second while not sprinting
+}
+
+-- Camera
+GameConfig.Camera = {
+    Sensitivity = 0.5,
+    MinPitch = -80, -- degrees, looking down
+    MaxPitch = 80,  -- degrees, looking up
+    StandingCameraOffset = Vector3.new(0, 0, 0),
+    CrouchCameraOffset = Vector3.new(0, -2, 0),
+    CrouchTransitionSpeed = 10, -- lerp speed
 }
 
 -- Combat
