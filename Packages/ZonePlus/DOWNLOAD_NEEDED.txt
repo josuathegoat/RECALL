@@ -1,0 +1,7 @@
+ZonePlus needs to be downloaded manually from:
+https://github.com/1ForeverHD/ZonePlus
+
+The source is located at src/Zone/ in the repository.
+This is a multi-file library that requires downloading the full Zone folder.
+
+Install via Roblox toolbox or clone the repository when C: drive space is available.

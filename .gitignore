@@ -1,0 +1,21 @@
+# Roblox place files
+*.rbxlx
+*.rbxl
+*.rbxlx.lock
+*.rbxl.lock
+
+# Tools (binaries, not source)
+.tools/
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# IDE
+.vscode/
+*.swp
+*.swo
+
+# Temp files
+*.tmp
+_browser_download_url_

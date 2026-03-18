@@ -1,0 +1,15 @@
+TopbarPlus needs to be downloaded manually from:
+https://github.com/1ForeverHD/TopbarPlus
+
+The source is located at src/ in the repository with multiple files:
+- init.lua
+- Attribute.lua
+- Reference.lua
+- Types.lua
+- Utility.lua
+- VERSION.lua
+- Elements/ (folder)
+- Features/ (folder)
+- Packages/ (folder)
+
+This is a complex multi-file library. Install via Roblox toolbox or clone the repository when C: drive space is available.
